@@ -1,0 +1,78 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Get version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF/refs\/tags\/v/}" >> $GITHUB_OUTPUT
+      
+    - name: Create plugin package
+      run: |
+        # Create clean plugin directory
+        mkdir -p LightroomRatioCreator.lrplugin
+        
+        # Copy essential files
+        cp *.lua LightroomRatioCreator.lrplugin/
+        cp LICENSE LightroomRatioCreator.lrplugin/
+        cp README.md LightroomRatioCreator.lrplugin/
+        cp CHANGELOG.md LightroomRatioCreator.lrplugin/
+        
+        # Remove development/test files
+        rm -f LightroomRatioCreator.lrplugin/Debug.lua
+        rm -f LightroomRatioCreator.lrplugin/MinimalTest.lua
+        rm -f LightroomRatioCreator.lrplugin/SimpleRatioTest.lua
+        
+        # Create zip archive
+        zip -r LightroomRatioCreator_v${{ steps.get_version.outputs.VERSION }}.zip LightroomRatioCreator.lrplugin
+        
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Lightroom Ratio Creator v${{ steps.get_version.outputs.VERSION }}
+        body: |
+          ## 🎉 New Release: v${{ steps.get_version.outputs.VERSION }}
+          
+          ### 📦 Installation
+          1. Download the `LightroomRatioCreator_v${{ steps.get_version.outputs.VERSION }}.zip` file below
+          2. Extract the zip to get the `.lrplugin` folder
+          3. Install in Lightroom Classic via File > Plug-in Manager > Add
+          
+          ### 📐 Supported Aspect Ratios
+          - **Social Media**: Instagram (1:1, 4:5, 9:16), TikTok (9:16), YouTube (16:9)
+          - **Print Formats**: 3:2, 4:3, 5:4, 8:10 and more
+          - **Smart Orientation**: Automatically adjusts ratios for image orientation
+          
+          ### 📋 Changes
+          See [CHANGELOG.md](https://github.com/woutervellekoop/lightroom-ratio-creator/blob/main/CHANGELOG.md) for detailed changes.
+          
+          ### 💬 Support
+          - [GitHub Issues](https://github.com/woutervellekoop/lightroom-ratio-creator/issues) for bug reports
+          - [Discussions](https://github.com/woutervellekoop/lightroom-ratio-creator/discussions) for questions
+          
+          **Compatibility**: Adobe Lightroom Classic 10.0+
+        draft: false
+        prerelease: false
+        
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./LightroomRatioCreator_v${{ steps.get_version.outputs.VERSION }}.zip
+        asset_name: LightroomRatioCreator_v${{ steps.get_version.outputs.VERSION }}.zip
+        asset_content_type: application/zip
